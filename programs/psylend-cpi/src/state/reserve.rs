@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
 use psy_math::Number;
 
-use super::{Cache, CACHE_TTL_LONG, interpolate};
+use super::{interpolate, Cache, CACHE_TTL_LONG};
 
 /// There are this many reward states/periods before the reward functionality becomes inoperable.
 /// This is the number of indexes the array of states in the `market_rewards` struct can support.
@@ -11,7 +11,7 @@ pub const MAX_RESERVE_STATES: usize = 96;
 
 // Size = 12
 #[repr(C)]
-#[derive(Pod, Zeroable, Clone, Copy, AnchorDeserialize, AnchorSerialize)]
+#[derive(Pod, Zeroable, Clone, Copy, AnchorDeserialize, AnchorSerialize, Debug)]
 pub struct PsyFiVaultConfig {
     pub vault_account: Pubkey,
     pub collateral_token_decimals: u8,
@@ -21,7 +21,7 @@ pub struct PsyFiVaultConfig {
 
 /// All rates here are stored with a common denom of 10,000 (BPS_EXPONENT).
 /// For example, a 5% rate would be stored as .05 * 10,000 = 500
-/// 
+///
 /// We have three interest rate regimes. The rate is described by a continuous,
 /// piecewise-linear function of the utilization rate:
 /// 1. zero to [utilization_rate_1]: borrow rate increases linearly from
@@ -36,7 +36,7 @@ pub struct PsyFiVaultConfig {
 /// by counting slots, and comparing against the number of slots per year.
 /// Size = 64
 #[repr(C)]
-#[derive(Pod, Zeroable, Clone, Copy, AnchorDeserialize, AnchorSerialize)]
+#[derive(Pod, Zeroable, Clone, Copy, AnchorDeserialize, AnchorSerialize, Debug)]
 pub struct ReserveConfig {
     /// The utilization rate at which we switch from the first to second regime.
     pub utilization_rate_1: u16,
@@ -99,6 +99,7 @@ pub struct ReserveConfig {
 /// A reserve tracks a single asset for depositing and/or lending, under a single market.
 ///
 /// Size = 5184 (plus 8 byte anchor discriminator)
+#[derive(Debug)]
 #[account(zero_copy)]
 pub struct Reserve {
     pub version: u16,
@@ -178,21 +179,21 @@ pub struct Reserve {
     state: [u8; 3584],
 }
 
-pub fn get_reserve_from_bytes(v: &[u8]) -> &Reserve{
+pub fn get_reserve_from_bytes(v: &[u8]) -> &Reserve {
     bytemuck::from_bytes(v)
 }
 
 impl Reserve {
-    fn state(&self) -> &Cache<ReserveState, { CACHE_TTL_LONG }> {
+    pub fn state(&self) -> &Cache<ReserveState, { CACHE_TTL_LONG }> {
         bytemuck::from_bytes(&self.state)
     }
     /// Get state, fail if expired. Accrue first, or this will fail
-    fn unwrap_state(&self, current_slot: u64) -> &ReserveState {
+    pub fn unwrap_state(&self, current_slot: u64) -> &ReserveState {
         self.state()
             .expect(current_slot, "Reserve needs to be refreshed")
     }
     /// Get state regardless of age. State may be any arbitrary number of slots old.
-    fn state_stale(&self) -> &ReserveState {
+    pub fn state_stale(&self) -> &ReserveState {
         self.state().get_stale()
     }
 
@@ -275,43 +276,43 @@ pub fn utilization_rate(outstanding_debt: Number, vault_total: u64) -> Number {
 ///
 /// For total deposit/loan notes in circulation: `total_deposit_notes`, `total_loan_notes`
 /// Size = 3568
-#[derive(Pod, Zeroable, Clone, Copy)]
+#[derive(Pod, Zeroable, Clone, Copy, Debug)]
 #[repr(C)]
-struct ReserveState {
-    accrued_until: i64,
+pub struct ReserveState {
+    pub accrued_until: i64,
 
     /// Amount of deposited tokens loaned out to borrowers, plus amount of tokens charged
     /// in fees (in U192 Number, in token.)
     ///
     /// Storage format example: debt is 5.927 token, with 8 token decimals
     /// `5.927 * 10 ^ 8 * 10 ^ 15 = 592,700,000,000,000,000,000,000`
-    outstanding_debt: Number,
+    pub outstanding_debt: Number,
 
     /// Amount of fees collected (in U192 Number, in token). `Outstanding debt` includes
     /// this amount.
     ///
     /// Storage format example: fees are 5.927 token, with 8 token decimals
     /// `5.927 * 10 ^ 8 * 10 ^ 15 = 592,700,000,000,000,000,000,000`
-    uncollected_fees: Number,
+    pub uncollected_fees: Number,
 
     /// Amount of deposited tokens that is not borrowed (in token)
-    total_deposits: u64,
+    pub total_deposits: u64,
 
     /// Amount of deposit notes issued and in circulation (i.e., matches mint's supply)
-    total_deposit_notes: u64,
+    pub total_deposit_notes: u64,
 
     /// Amount of loan notes issued and in circulation (i.e., matches mint's supply)
-    total_loan_notes: u64,
+    pub total_loan_notes: u64,
 
     /// Each index corresponds to cummulative sum of the reward points distributed
     /// per deposit note for the distribution period. This value is denominated in
     /// reward_unit_decimals.
-    cummulative_deposit_reward_units: [u128; MAX_RESERVE_STATES],
+    pub cummulative_deposit_reward_units: [u128; MAX_RESERVE_STATES],
 
     /// Each index corresponds to cummulative sum of the reward points distributed
     /// distributed per loan note for the distribution period. This value is denominated in
     /// reward_unit_decimals.
-    cummulative_loan_reward_units: [u128; MAX_RESERVE_STATES],
+    pub cummulative_loan_reward_units: [u128; MAX_RESERVE_STATES],
 
     _reserved: FixedBuf<416>,
 }

@@ -85,7 +85,7 @@ fn get_cpi_instruction(
             AccountMeta::new_readonly(ctx.accounts.system_program.key(), false),
             AccountMeta::new_readonly(ctx.accounts.rent.key(), false),
         ],
-        data: get_ix_data(bump),
+        data: get_init_ix_data(bump),
     };
     Ok(instruction)
 }
@@ -95,7 +95,7 @@ struct CpiArgs {
     bump: u8,
 }
 
-fn get_ix_data(bump: u8) -> Vec<u8> {
+pub fn get_init_ix_data(bump: u8) -> Vec<u8> {
     let hash = get_function_hash("global", "init_deposit_account");
     let mut buf: Vec<u8> = vec![];
     buf.extend_from_slice(&hash);

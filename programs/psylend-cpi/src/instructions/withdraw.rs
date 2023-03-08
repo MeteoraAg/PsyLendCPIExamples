@@ -97,7 +97,7 @@ fn get_cpi_instruction(
             AccountMeta::new_readonly(ctx.accounts.psy_program.key(), false),
             AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),
         ],
-        data: get_ix_data(bump, amount),
+        data: get_withdraw_ix_data(bump, amount),
     };
     Ok(instruction)
 }
@@ -105,10 +105,10 @@ fn get_cpi_instruction(
 #[derive(AnchorSerialize, AnchorDeserialize)]
 struct CpiArgs {
     bump: u8,
-    amount: Amount
+    amount: Amount,
 }
 
-fn get_ix_data(bump: u8, amount: Amount) -> Vec<u8> {
+pub fn get_withdraw_ix_data(bump: u8, amount: Amount) -> Vec<u8> {
     let hash = get_function_hash("global", "withdraw");
     let mut buf: Vec<u8> = vec![];
     buf.extend_from_slice(&hash);

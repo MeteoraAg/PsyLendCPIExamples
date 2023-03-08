@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("2BUrizpXHXA43qJxnzRBGpwemtHKVqB3JE3G63NKHbzz");
+declare_id!("PLENDj46Y4hhqitNV2WqLqGLrWKAaH2xJHm2UyHgJLY");
 
 pub mod combinations;
 pub mod constants;
@@ -126,7 +126,6 @@ pub mod psylend_cpi {
     pub fn get_current_interest(ctx: Context<GetCurrentInterest>) -> Result<()> {
         combinations::get_current_interest::handler(ctx)
     }
-    
 
     // This ix is quite large, the program may not have space for it, or you may need to Box Accounts.
     // pub fn liquidate_cpi(
